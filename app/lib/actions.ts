@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 
-
 const FormSchema = z.object({
     id: z.string(),
     customerId: z.string(),
@@ -29,5 +28,40 @@ export async function createInvoice(formData: FormData) {
     VALUES (${customerId}, ${amountInCents}, ${status}, ${date})`;
     revalidatePath("/dashboard/invoices");
     redirect("/dashboard/invoices");
+
+}
+
+const UpdateInvoice = FormSchema.omit({id:true,date:true})
+export async function updateInvoice(id: string, formData: FormData) {
+  
+  const { customerId, amount, status  } = UpdateInvoice.parse({
+    customerId: formData.get("customerId"),
+    amount: formData.get("amount"),
+    status: formData.get("status"),
+  });
+  const amountInCents = parseInt(amount) * 100;
+
+  try {await sql`
+    UPDATE invoices
+    SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+    WHERE id = ${id}
+  `;
+  }
+  catch (error) {
+    return { message: "Database Error: Unable to Update Invoice" };
+  }
+
+    revalidatePath("/dashboard/invoices");
+    redirect("/dashboard/invoices");
+}
+export async function deleteInvoice(id: string) {
+  //throw new Error('Failed to Delete Invoice');
+  try {
+    await sql`DELETE FROM invoices WHERE id = ${id}`;
+    revalidatePath("/dashboard/invoices");
+  }
+  catch (error) {
+      return {message:'Database Error: Unable to Delete Invoice'}
+  }
 
 }
